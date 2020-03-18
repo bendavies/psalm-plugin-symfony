@@ -40,66 +40,22 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ${{ steps.determine-composer-cache-directory.outputs.directory }}
-          key: php-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-${{ hashFiles('**/composer.json') }}
+          key: php-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
           restore-keys: php-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-
 
       - name: "Install highest dependencies from composer.json"
         if: matrix.dependencies == 'highest'
         run: composer install --no-interaction --no-progress --no-suggest
 
-      - name: "Run vimeo/psalm"
-        run: vendor/bin/psalm --config=psalm.xml --shepherd --show-info=false --stats --output-format=github
-
-  tests:
-    name: "Tests"
-
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        php-version:
-          - 7.1
-          - 7.2
-          - 7.3
-          - 7.4
-
-        dependencies:
-          - lowest
-          - highest
-
-    steps:
-      - name: "Checkout"
-        uses: actions/checkout@v2
-
-      - name: "Install PHP with extensions"
-        uses: shivammathur/setup-php@v2
-        with:
-          coverage: none
-          php-version: ${{ matrix.php-version }}
-
-      - name: "Determine composer cache directory"
-        id: determine-composer-cache-directory
-        run: echo "::set-output name=directory::$(composer config cache-dir)"
-
-      - name: "Cache dependencies installed with composer"
+      - name: "Cache cache directory for vimeo/psalm"
         uses: actions/cache@v1
         with:
-          path: ${{ steps.determine-composer-cache-directory.outputs.directory }}
-          key: php-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-${{ hashFiles('**/composer.json') }}
-          restore-keys: php-${{ matrix.php-version }}-composer-${{ matrix.dependencies }}-
+          path: .build/psalm
+          key: php-${{ matrix.php-version }}-psalm-${{ hashFiles('src/**/*.php') }}
+          restore-keys: php-${{ matrix.php-version }}-psalm-
 
-      - name: "Install lowest dependencies from composer.json"
-        if: matrix.dependencies == 'lowest'
-        run: composer update --no-interaction --no-progress --no-suggest --prefer-lowest
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v1
 
-      - name: "Install highest dependencies from composer.json"
-        if: matrix.dependencies == 'highest'
-        run: composer update --no-interaction --no-progress --no-suggest
-
-      - name: "Run unit tests with phpunit"
-        run: vendor/bin/phpunit --configuration=phpunit.xml
-
-      - name: "Run acceptance tests with codeception"
-        run: |
-          vendor/bin/codecept build
-          vendor/bin/codecept run -v
+      #- name: "Run vimeo/psalm"
+      #  run: vendor/bin/psalm --config=psalm.xml --diff --diff-methods --shepherd --show-info=false --stats --output-format=github
